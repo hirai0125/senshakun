@@ -1,0 +1,1165 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>洗車くん</title>
+<meta name="theme-color" content="#0b88b4">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="洗車くん">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@500;700;800&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+/* 洗車場の水色と泡の白、ワックスの金。上に愛車カード、下に「次はいつ？」タイル、画面下にタブ */
+:root{
+  --bg:#eaf4f8;
+  --surface:#ffffff;
+  --surface2:#f3f9fb;
+  --ink:#10293a;
+  --muted:#587385;
+  --line:#d3e3ea;
+  --accent:#0b88b4;
+  --accent-soft:#d8eff7;
+  --accent-ink:#ffffff;
+  --wax:#d99a12;
+  --ok:#1c9367;
+  --soon:#c97f00;
+  --over:#d03f3f;
+  --ok-bg:#e1f4ec;
+  --soon-bg:#fdf1d9;
+  --over-bg:#fbe4e4;
+  --shadow:0 1px 2px rgba(16,41,58,.06),0 4px 14px rgba(16,41,58,.06);
+  --display:"M PLUS Rounded 1c","Hiragino Maru Gothic ProN","Yu Gothic",sans-serif;
+  --body:"Zen Kaku Gothic New","Hiragino Sans","Yu Gothic","Meiryo",sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0c1820; --surface:#13232e; --surface2:#182c38; --ink:#e4f0f5; --muted:#91aab8;
+    --line:#26404e; --accent:#36b4dc; --accent-soft:#163a49; --accent-ink:#06202b; --wax:#f0b93a;
+    --ok:#4cc995; --soon:#f0ad3a; --over:#f07272; --ok-bg:#163428; --soon-bg:#3a2c10; --over-bg:#3d1c1c;
+    --shadow:0 1px 2px rgba(0,0,0,.3),0 4px 14px rgba(0,0,0,.25);
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0c1820; --surface:#13232e; --surface2:#182c38; --ink:#e4f0f5; --muted:#91aab8;
+  --line:#26404e; --accent:#36b4dc; --accent-soft:#163a49; --accent-ink:#06202b; --wax:#f0b93a;
+  --ok:#4cc995; --soon:#f0ad3a; --over:#f07272; --ok-bg:#163428; --soon-bg:#3a2c10; --over-bg:#3d1c1c;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 4px 14px rgba(0,0,0,.25);
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.6;-webkit-tap-highlight-color:transparent}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0;line-height:1.3}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px;border-radius:6px}
+.num{font-variant-numeric:tabular-nums}
+img{max-width:100%}
+
+/* layout */
+.app{max-width:760px;margin:0 auto;min-height:100%;padding:0 16px calc(96px + env(safe-area-inset-bottom));}
+header.top{display:flex;align-items:center;gap:10px;padding:calc(12px + env(safe-area-inset-top)) 0 10px}
+header.top .logo{width:38px;height:38px;flex:none}
+header.top h1{font-size:22px;font-weight:800;letter-spacing:.02em}
+header.top .sub{font-size:12px;color:var(--muted);margin-left:auto;text-align:right}
+.badge-mode{display:inline-flex;align-items:center;gap:5px;padding:2px 8px;border-radius:99px;background:var(--surface);border:1px solid var(--line);font-size:11px;color:var(--muted)}
+.badge-mode i{width:7px;height:7px;border-radius:50%;background:var(--ok);display:inline-block}
+.badge-mode.local i{background:var(--soon)}
+.note{background:var(--soon-bg);color:var(--ink);border-radius:10px;padding:8px 12px;font-size:13px;margin:4px 0 10px}
+.stack{display:flex;flex-direction:column;gap:14px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow)}
+.sec-h{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin:6px 2px 0}
+.sec-h h2{font-size:17px;font-weight:700}
+.sec-h small{color:var(--muted);font-size:12px}
+
+/* car switcher */
+.switcher{display:flex;gap:8px;overflow-x:auto;padding-bottom:2px}
+.switcher button{flex:none;border:1px solid var(--line);background:var(--surface);border-radius:99px;padding:5px 14px;font-size:13px}
+.switcher button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+
+/* hero */
+.hero{overflow:hidden}
+.hero .photo{position:relative;aspect-ratio:16/9;background:linear-gradient(160deg,var(--accent-soft),var(--surface2));display:flex;align-items:center;justify-content:center}
+.hero .photo img{width:100%;height:100%;object-fit:cover;display:block}
+.hero .photo .ph-empty{display:flex;flex-direction:column;align-items:center;gap:6px;color:var(--muted);font-size:13px}
+.hero .photo .plate{position:absolute;left:12px;bottom:12px;background:rgba(255,255,255,.92);color:#10293a;border:2px solid #2c5a3c;border-radius:6px;padding:1px 10px;font-weight:700;font-size:13px}
+.hero .body{padding:14px 16px 16px;display:grid;gap:10px}
+.hero .name{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px}
+.hero .name h2{font-size:22px;font-weight:800}
+.hero .name span{color:var(--muted);font-size:14px}
+.hero .facts{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.fact{background:var(--surface2);border-radius:12px;padding:8px 10px;min-width:0}
+.fact b{display:block;font-family:var(--display);font-size:19px;font-weight:800;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fact small{color:var(--muted);font-size:11px}
+button.fact{border:1px dashed var(--accent);text-align:left;background:var(--accent-soft)}
+
+/* quick buttons */
+.quick{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+.quick button{border:1px solid var(--line);background:var(--surface);border-radius:14px;padding:10px 4px 8px;display:flex;flex-direction:column;align-items:center;gap:4px;font-size:11.5px;line-height:1.25;box-shadow:var(--shadow)}
+.quick button:active{transform:translateY(1px)}
+.ico{width:34px;height:34px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;color:#fff;flex:none}
+.ico svg{width:20px;height:20px}
+.ico.sm{width:26px;height:26px}
+.ico.sm svg{width:15px;height:15px}
+
+/* status tiles */
+.tiles{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.tile{position:relative;padding:12px 12px 12px 16px;display:grid;gap:4px;overflow:hidden;text-align:left;border:1px solid var(--line);background:var(--surface);border-radius:14px;box-shadow:var(--shadow)}
+.tile::before{content:"";position:absolute;left:0;top:0;bottom:0;width:5px;background:var(--line)}
+.tile.ok::before{background:var(--ok)}
+.tile.soon::before{background:var(--soon)}
+.tile.over::before{background:var(--over)}
+.tile .t-h{display:flex;align-items:center;gap:8px;font-weight:700;font-size:14px}
+.tile .t-big{font-family:var(--display);font-size:16px;font-weight:800;line-height:1.35}
+.tile .t-sub{font-size:12px;color:var(--muted)}
+.pill{display:inline-block;font-size:11px;font-weight:700;padding:1px 8px;border-radius:99px;margin-left:auto;white-space:nowrap}
+.pill.ok{background:var(--ok-bg);color:var(--ok)}
+.pill.soon{background:var(--soon-bg);color:var(--soon)}
+.pill.over{background:var(--over-bg);color:var(--over)}
+.pill.none{background:var(--surface2);color:var(--muted)}
+
+/* list */
+.list{display:flex;flex-direction:column}
+.row{display:flex;gap:12px;align-items:flex-start;padding:12px 14px;border-top:1px solid var(--line);background:none;border-left:0;border-right:0;border-bottom:0;text-align:left;width:100%}
+.row:first-child{border-top:0}
+.row .r-main{flex:1;min-width:0}
+.row .r-t{font-weight:700;display:flex;gap:8px;flex-wrap:wrap;align-items:baseline}
+.row .r-t small{font-weight:400;color:var(--muted)}
+.row .r-s{font-size:12.5px;color:var(--muted);overflow-wrap:anywhere}
+.row .r-r{text-align:right;font-size:13px;white-space:nowrap}
+.month-h{font-family:var(--display);font-weight:700;font-size:13px;color:var(--muted);padding:12px 4px 4px}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{border:1px solid var(--line);background:var(--surface);border-radius:99px;padding:4px 11px;font-size:12.5px;display:inline-flex;align-items:center;gap:5px}
+.chip[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.chip .dot{width:9px;height:9px;border-radius:50%}
+.sumbar{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.empty{padding:24px 16px;text-align:center;color:var(--muted);font-size:14px}
+
+/* calendar */
+.cal-nav{display:flex;align-items:center;justify-content:space-between;padding:10px 12px}
+.cal-nav h2{font-size:18px}
+.iconbtn{border:1px solid var(--line);background:var(--surface);border-radius:10px;width:38px;height:38px;display:inline-flex;align-items:center;justify-content:center}
+.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;padding:0 10px 12px}
+.cal .dow{font-size:11px;text-align:center;color:var(--muted);padding:2px 0}
+.cal .dow.sun{color:var(--over)} .cal .dow.sat{color:var(--accent)}
+.cal button.day{min-height:58px;border:1px solid transparent;background:var(--surface2);border-radius:10px;padding:3px;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:12px}
+.cal button.day.other{opacity:.35}
+.cal button.day.today{border-color:var(--accent)}
+.cal button.day.sel{background:var(--accent-soft);border-color:var(--accent)}
+.cal .marks{display:flex;flex-wrap:wrap;gap:2px;justify-content:center}
+.cal .marks i{width:8px;height:8px;border-radius:50%;display:block}
+
+/* forms */
+.form{display:grid;gap:12px}
+.f2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+label.fl{display:grid;gap:4px;font-size:12.5px;color:var(--muted);font-weight:500}
+.inp{width:100%;border:1px solid var(--line);background:var(--surface2);border-radius:10px;padding:9px 11px;font-size:16px;color:var(--ink);min-width:0}
+textarea.inp{min-height:70px;resize:vertical}
+.btn{border:0;border-radius:12px;padding:11px 16px;font-weight:700;background:var(--accent);color:var(--accent-ink);font-size:15px}
+.btn.ghost{background:var(--surface2);color:var(--ink);border:1px solid var(--line)}
+.btn.danger{background:var(--over-bg);color:var(--over)}
+.btn.small{padding:6px 12px;font-size:13px;border-radius:10px}
+.btns{display:flex;gap:8px;flex-wrap:wrap}
+.btns .grow{flex:1}
+.typepick{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.typepick button{border:1.5px solid var(--line);background:var(--surface);border-radius:12px;padding:7px 4px;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:11.5px;line-height:1.2}
+.typepick button[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft);font-weight:700}
+
+/* modal */
+.modal-bg{position:fixed;inset:0;background:rgba(6,20,28,.45);display:flex;align-items:flex-end;justify-content:center;z-index:50;padding:0}
+.modal{background:var(--surface);width:100%;max-width:560px;max-height:92%;overflow:auto;border-radius:20px 20px 0 0;padding:18px 16px calc(18px + env(safe-area-inset-bottom));box-shadow:0 -8px 30px rgba(0,0,0,.2)}
+@media (min-width:640px){.modal-bg{align-items:center;padding:16px}.modal{border-radius:20px}}
+.modal h3{font-size:18px;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.photo-pick{display:flex;gap:12px;align-items:center}
+.photo-pick .thumb{width:120px;aspect-ratio:16/10;border-radius:10px;background:var(--surface2);border:1px dashed var(--line);overflow:hidden;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:12px;flex:none}
+.photo-pick .thumb img{width:100%;height:100%;object-fit:cover}
+
+/* camera */
+.cam{position:fixed;inset:0;z-index:80;background:#000;display:flex;flex-direction:column}
+.cam .view{flex:1;position:relative;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.cam video,.cam img{width:100%;height:100%;object-fit:contain;display:block}
+.cam .bar{display:flex;align-items:center;justify-content:space-around;gap:10px;padding:16px 16px calc(20px + env(safe-area-inset-bottom));background:#000}
+.cam .bar .btn{min-width:110px}
+.cam [hidden]{display:none!important}
+.cam .shut{width:72px;height:72px;border-radius:50%;border:5px solid #fff;background:#fff;box-shadow:inset 0 0 0 4px #000}
+.cam .shut:active{transform:scale(.94)}
+.cam .x{position:absolute;top:calc(12px + env(safe-area-inset-top));right:12px;width:44px;height:44px;border-radius:50%;border:0;background:rgba(0,0,0,.55);color:#fff;font-size:22px}
+.cam .hint{position:absolute;left:0;right:0;top:calc(18px + env(safe-area-inset-top));text-align:center;color:#fff;font-size:13px;text-shadow:0 1px 3px #000}
+
+/* happy popup */
+.happy{position:fixed;inset:0;z-index:70;display:flex;align-items:center;justify-content:center;pointer-events:none}
+.happy .box{background:var(--surface);border:1px solid var(--line);border-radius:24px;padding:18px 26px 20px;box-shadow:0 12px 40px rgba(6,40,60,.25);display:grid;justify-items:center;gap:6px;animation:pop .35s cubic-bezier(.3,1.6,.6,1)}
+.happy svg{width:170px;height:auto;animation:jump .5s ease-in-out 3}
+.happy b{font-family:var(--display);font-size:20px;font-weight:800;color:var(--accent)}
+.happy small{color:var(--muted);font-size:13px}
+.happy .bub{animation:rise 1.6s ease-in infinite}
+@keyframes pop{from{transform:scale(.6);opacity:0}to{transform:scale(1);opacity:1}}
+@keyframes jump{0%,100%{transform:translateY(0) rotate(0)}30%{transform:translateY(-14px) rotate(-4deg)}60%{transform:translateY(0) rotate(3deg)}}
+@media (prefers-reduced-motion: reduce){.happy .box,.happy svg,.happy .bub{animation:none}}
+
+/* garage */
+.gcar{overflow:hidden;display:grid}
+.gpick{display:grid;grid-template-columns:132px 1fr;gap:12px;align-items:center;border:0;background:none;text-align:left;padding:12px 12px 6px;width:100%}
+.gph{position:relative;aspect-ratio:4/3;border-radius:12px;overflow:hidden;background:linear-gradient(160deg,var(--accent-soft),var(--surface2));display:flex;align-items:center;justify-content:center;color:var(--muted)}
+.gph img{width:100%;height:100%;object-fit:cover}
+.gph .plate{position:absolute;left:6px;bottom:6px;background:rgba(255,255,255,.92);color:#10293a;border:1.5px solid #2c5a3c;border-radius:4px;padding:0 5px;font-size:10px;font-weight:700}
+.ginfo{display:grid;gap:2px;min-width:0}
+.gname{font-family:var(--display);font-weight:800;font-size:18px;line-height:1.3}
+.gname small{font-family:var(--body);font-weight:500;font-size:11px;color:var(--muted)}
+.gsub{font-size:12.5px;color:var(--muted)}
+.gbtns{display:flex;gap:8px;padding:6px 12px 12px}
+.gbtns .grow{flex:1}
+.gadd{display:flex;gap:14px;align-items:center;padding:16px;border:2px dashed var(--accent);background:var(--accent-soft);text-align:left;width:100%;box-shadow:none}
+.gadd .plus{width:46px;height:46px;border-radius:50%;background:var(--accent);color:var(--accent-ink);font-size:28px;line-height:46px;text-align:center;flex:none;font-weight:700}
+.gadd b{display:block;font-size:16px}.gadd small{color:var(--muted);font-size:12.5px}
+@media (max-width:380px){.gpick{grid-template-columns:104px 1fr}}
+header.top .home-link{display:flex;align-items:center;gap:10px;border:0;background:none;padding:0}
+
+/* nav */
+nav.tabs{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border-top:1px solid var(--line);display:flex;justify-content:center;z-index:40;padding-bottom:env(safe-area-inset-bottom)}
+nav.tabs .inner{display:grid;grid-template-columns:repeat(5,1fr);max-width:760px;width:100%}
+nav.tabs button{border:0;background:none;padding:8px 2px 7px;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:11px;color:var(--muted)}
+nav.tabs button svg{width:23px;height:23px}
+nav.tabs button[aria-current="page"]{color:var(--accent);font-weight:700}
+nav.tabs button.add .plus{width:44px;height:44px;margin-top:-20px;border-radius:50%;background:var(--accent);color:var(--accent-ink);display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(11,136,180,.35);border:3px solid var(--surface)}
+
+.toast{position:fixed;left:50%;bottom:calc(84px + env(safe-area-inset-bottom));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:8px 16px;border-radius:99px;font-size:13px;z-index:60;box-shadow:var(--shadow);max-width:90%}
+
+/* splash */
+.splash{position:fixed;inset:0;z-index:100;background:linear-gradient(180deg,#bfe7f5 0%,#e9f7fc 55%,#ffffff 100%);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:#10293a;transition:opacity .4s}
+.splash.hide{opacity:0;pointer-events:none}
+.splash svg{width:min(62vw,260px);height:auto}
+.splash h1{font-size:40px;font-weight:800;letter-spacing:.06em;color:#0b5f80}
+.splash p{margin:0;color:#3f6577;font-size:14px}
+.splash .btn{margin-top:10px;padding:12px 34px;border-radius:99px;background:#0b88b4;color:#fff}
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+@keyframes rise{0%{transform:translateY(0);opacity:.9}100%{transform:translateY(-26px);opacity:0}}
+.splash .car{animation:bob 2.2s ease-in-out infinite}
+.splash .bub{animation:rise 2.4s ease-in infinite}
+.splash .bub:nth-of-type(2){animation-delay:.6s}.splash .bub:nth-of-type(3){animation-delay:1.2s}.splash .bub:nth-of-type(4){animation-delay:1.8s}
+@media (prefers-reduced-motion: reduce){.splash .car,.splash .bub{animation:none}}
+
+.welcome{padding:20px 16px;display:grid;gap:12px;justify-items:center;text-align:center}
+.welcome svg{width:150px}
+.example{opacity:.75}
+.example .tag{font-size:11px;background:var(--surface2);border:1px solid var(--line);border-radius:6px;padding:0 6px;color:var(--muted)}
+@media (max-width:420px){.quick button{font-size:10.5px}.hero .facts{gap:6px}.fact b{font-size:16px}.tiles{gap:8px}}
+</style>
+</head>
+<body>
+<div class="splash" id="splash" role="dialog" aria-label="洗車くん">
+  <svg viewBox="0 0 240 190" aria-hidden="true">
+    <circle class="bub" cx="40" cy="70" r="12" fill="#fff" stroke="#8fd3ea" stroke-width="2"/>
+    <circle class="bub" cx="205" cy="60" r="9" fill="#fff" stroke="#8fd3ea" stroke-width="2"/>
+    <circle class="bub" cx="186" cy="30" r="6" fill="#fff" stroke="#8fd3ea" stroke-width="2"/>
+    <circle class="bub" cx="60" cy="36" r="7" fill="#fff" stroke="#8fd3ea" stroke-width="2"/>
+    <g class="car">
+      <ellipse cx="120" cy="172" rx="80" ry="8" fill="#0b5f80" opacity=".12"/>
+      <path d="M38 128c0-16 8-24 22-27l18-30c4-7 10-11 18-11h50c8 0 14 4 18 11l18 30c14 3 22 11 22 27v12c0 6-4 10-10 10H48c-6 0-10-4-10-10z" fill="#19a7ce"/>
+      <path d="M84 74c2-4 6-6 10-6h52c4 0 8 2 10 6l14 26H70z" fill="#e6f7fd"/>
+      <path d="M120 68v32" stroke="#19a7ce" stroke-width="5"/>
+      <circle cx="98" cy="88" r="6" fill="#10293a"/><circle cx="100" cy="86" r="2" fill="#fff"/>
+      <circle cx="142" cy="88" r="6" fill="#10293a"/><circle cx="144" cy="86" r="2" fill="#fff"/>
+      <path d="M110 120q10 9 20 0" stroke="#10293a" stroke-width="4" fill="none" stroke-linecap="round"/>
+      <circle cx="84" cy="122" r="6" fill="#ff9fb0" opacity=".7"/><circle cx="156" cy="122" r="6" fill="#ff9fb0" opacity=".7"/>
+      <rect x="40" y="114" width="18" height="10" rx="5" fill="#fff4c2"/><rect x="182" y="114" width="18" height="10" rx="5" fill="#fff4c2"/>
+      <circle cx="72" cy="152" r="17" fill="#10293a"/><circle cx="72" cy="152" r="7" fill="#c9d6dc"/>
+      <circle cx="168" cy="152" r="17" fill="#10293a"/><circle cx="168" cy="152" r="7" fill="#c9d6dc"/>
+      <path d="M62 60l3 8 8 3-8 3-3 8-3-8-8-3 8-3z" fill="#f2b134"/>
+      <path d="M180 92l2 5 5 2-5 2-2 5-2-5-5-2 5-2z" fill="#f2b134"/>
+      <ellipse cx="96" cy="110" rx="14" ry="3" fill="#fff" opacity=".35"/>
+    </g>
+  </svg>
+  <h1>洗車くん</h1>
+  <p>洗車・ワックス・オイル・タイヤの記録帳</p>
+  <button class="btn" id="startBtn" type="button">はじめる</button>
+</div>
+
+<div class="app">
+  <header class="top">
+    <button type="button" class="home-link" data-act="garage" aria-label="車の一覧へ"><svg class="logo" viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="19" fill="#19a7ce"/><path d="M8 25c0-3 2-5 5-5.5l3.5-6c.8-1.3 2-2 3.5-2h0c1.5 0 2.7.7 3.5 2l3.5 6c3 .5 5 2.5 5 5.5v2c0 1-.8 2-2 2H10c-1.2 0-2-1-2-2z" fill="#fff"/><circle cx="14" cy="29" r="3" fill="#10293a"/><circle cx="26" cy="29" r="3" fill="#10293a"/><circle cx="31" cy="10" r="3" fill="#fff" opacity=".8"/><circle cx="27" cy="6" r="1.8" fill="#fff" opacity=".8"/></svg>
+    <h1>洗車くん</h1></button>
+    <div class="sub"><span id="modeBadge" class="badge-mode"><i></i><span>読み込み中</span></span></div>
+  </header>
+  <div id="notes"></div>
+  <main id="main"></main>
+</div>
+
+<nav class="tabs" aria-label="メニュー">
+  <div class="inner">
+    <button type="button" data-view="home"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 16c0-2 1.2-3.2 3-3.5L9.2 8.6C9.7 7.6 10.6 7 11.7 7h.6c1.1 0 2 .6 2.5 1.6l2.2 3.9c1.8.3 3 1.5 3 3.5v1.5c0 .6-.4 1-1 1H5c-.6 0-1-.4-1-1z"/><circle cx="8" cy="18.5" r="1.6"/><circle cx="16" cy="18.5" r="1.6"/></svg>ホーム</button>
+    <button type="button" data-view="history"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 6h12M8 12h12M8 18h12"/><circle cx="4" cy="6" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="18" r="1"/></svg>履歴</button>
+    <button type="button" class="add" data-act="add"><span class="plus"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span>記録する</button>
+    <button type="button" data-view="calendar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>カレンダー</button>
+    <button type="button" data-view="cars"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>車・設定</button>
+  </div>
+</nav>
+
+<div id="modalRoot"></div>
+<div id="camRoot"></div>
+<div id="happyRoot"></div>
+<div id="toastRoot"></div>
+
+<script>
+"use strict";
+/* ========= 定義 ========= */
+const ICONS = {
+  wash:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="14" r="5"/><circle cx="17" cy="8" r="3"/><circle cx="18" cy="17" r="2"/><path d="M7 12.5a2 2 0 0 1 2-1.5" stroke-linecap="round"/></svg>',
+  wax:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M11 2l2.2 6.3L19.5 10.5l-6.3 2.2L11 19l-2.2-6.3L2.5 10.5l6.3-2.2z"/><path d="M19 14l1 2.6 2.6 1-2.6 1L19 21l-1-2.4-2.6-1 2.6-1z"/></svg>',
+  oil:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5c3.3 4.6 6.5 8 6.5 11.8a6.5 6.5 0 0 1-13 0c0-3.8 3.2-7.2 6.5-11.8z"/></svg>',
+  element:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="5" width="12" height="15" rx="2"/><path d="M6 9h12M6 13h12M6 17h12M10 2h4v3h-4z"/></svg>',
+  rotation:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12a8 8 0 0 1 13.7-5.6M20 12a8 8 0 0 1-13.7 5.6"/><path d="M18 2.5v4h-4M6 21.5v-4h4"/></svg>',
+  winter:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 2v20M3.3 7l17.4 10M3.3 17L20.7 7M9 4l3 2 3-2M9 20l3-2 3 2"/></svg>',
+  summer:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4.5" fill="currentColor"/><path d="M12 1.5v3M12 19.5v3M1.5 12h3M19.5 12h3M4.6 4.6l2.1 2.1M17.3 17.3l2.1 2.1M4.6 19.4l2.1-2.1M17.3 6.7l2.1-2.1"/></svg>',
+  inspection:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a4 4 0 0 0 5 5L21 13l-7 7a2.8 2.8 0 0 1-4-4l7-7-1.3-1.3a4 4 0 0 0-5-5L13 5z" transform="translate(-2 1)"/></svg>',
+  shaken:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>',
+  other:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 4h10l4 4v12H5z"/><path d="M9 12h6M9 16h4"/></svg>',
+  tire:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3.5"/><path d="M12 3v5.5M12 15.5V21M3 12h5.5M15.5 12H21"/></svg>',
+  battery:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M7 7V4h3v3M14 7V4h3v3M7 13h4M15 11v4M13 13h4"/></svg>',
+  wiper:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 18a13 13 0 0 1 18 0"/><path d="M12 18L18 6"/></svg>',
+  fuel:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 21V5a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v16M3 21h12M6 8h6"/><path d="M14 10h2a2 2 0 0 1 2 2v4a1.5 1.5 0 0 0 3 0V8l-3-3"/></svg>',
+  car:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 16c0-2 1.2-3.2 3-3.5L9.2 8.6C9.7 7.6 10.6 7 11.7 7h.6c1.1 0 2 .6 2.5 1.6l2.2 3.9c1.8.3 3 1.5 3 3.5v1.5c0 .6-.4 1-1 1H5c-.6 0-1-.4-1-1z"/><circle cx="8" cy="18.5" r="1.6"/><circle cx="16" cy="18.5" r="1.6"/></svg>',
+  star:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5l2.9 6 6.6.8-4.9 4.5 1.3 6.5L12 17l-5.9 3.3 1.3-6.5-4.9-4.5 6.6-.8z"/></svg>',
+  camera:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="34" height="34"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>',
+  left:'<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M15 5l-7 7 7 7"/></svg>',
+  right:'<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M9 5l7 7-7 7"/></svg>'
+};
+const TYPES = [
+  {k:'wash',      name:'洗車',               short:'洗車',     color:'#1f8fd1', hint:['手洗い','洗車機','コイン洗車','業者に依頼','水なし洗車','室内清掃も']},
+  {k:'wax',       name:'ワックス・コーティング', short:'ワックス', color:'#d39a12', hint:['固形ワックス','液体ワックス','スプレーワックス','ガラス系コーティング','業者コーティング'], product:{unit:'ml',brands:['シュアラスター','ソフト99','プロスタッフ','KeePer','シーシーアイ','ウイルソン','ピカピカレイン','カーメイト'],grades:[]}},
+  {k:'oil',       name:'オイル交換',           short:'オイル',   color:'#8b5a2b', hint:['自分で交換','店で交換'], product:{unit:'L',brands:['カストロール','モービル','ENEOS','出光','ワコーズ','トヨタ純正','ホンダ純正','日産純正','スバル純正','マツダ純正'],grades:['0W-8','0W-16','0W-20','5W-30','5W-40','10W-30']}},
+  {k:'element',   name:'オイルエレメント交換',   short:'エレメント', color:'#a46d2a', hint:['純正','社外品']},
+  {k:'rotation',  name:'タイヤローテーション',   short:'ローテ',   color:'#2f7f68', hint:['前後入れ替え','クロス']},
+  {k:'winter',    name:'スタッドレスへ履き替え', short:'冬タイヤへ', color:'#3d9ad6', hint:['自分で交換','店で交換']},
+  {k:'summer',    name:'ノーマルタイヤへ戻す',   short:'夏タイヤへ', color:'#df7a26', hint:['自分で交換','店で交換']},
+  {k:'inspection',name:'点検・車検',           short:'点検',     color:'#5f6690', hint:['12か月点検','6か月点検','車検','バッテリー交換','ワイパー交換']},
+  {k:'other',     name:'その他',              short:'その他',   color:'#6f8592', hint:['給油','パーツ交換','修理']}
+];
+const TYPE = Object.fromEntries(TYPES.map(t=>[t.k,t]));
+const ICON_CHOICES=['other','star','wash','wax','oil','element','rotation','tire','inspection','battery','wiper','fuel','car','shaken'];
+const COLOR_CHOICES=['#1f8fd1','#3d9ad6','#2f7f68','#4a9b3f','#d39a12','#df7a26','#c2410c','#d03f3f','#c2457a','#8b5cc7','#5f6690','#8b5a2b','#6f8592','#334155'];
+function customTypes(){ return (S.settings&&Array.isArray(S.settings.customTypes))?S.settings.customTypes:[]; }
+function syncTypes(){
+  Object.keys(TYPE).forEach(k=>{ if(k.startsWith('c_')) delete TYPE[k]; });
+  customTypes().forEach(c=>{ TYPE[c.k]={k:c.k,name:c.name,short:c.name,color:c.color||'#6f8592',icon:c.icon||'other',hint:[],custom:true,days:c.days??null,km:c.km??null,product:c.product?{unit:c.unit||'個',brands:[],grades:[]}:null}; });
+}
+function allTypes(){ syncTypes(); return TYPES.concat(customTypes().map(c=>TYPE[c.k])); }
+function tget(k,r){ return TYPE[k] || {k,name:(r&&r.typeName)||'削除した項目',short:(r&&r.typeName)||'削除した項目',color:'#6f8592',icon:'other',hint:[]}; }
+const INTERVAL_TYPES = ['wash','wax','oil','element','rotation','inspection'];
+const DEFAULT_SETTINGS = {
+  intervals:{wash:{days:14,km:null},wax:{days:90,km:null},oil:{days:180,km:5000},element:{days:365,km:10000},rotation:{days:180,km:5000},inspection:{days:365,km:null}},
+  winterMD:'11-25', summerMD:'03-25', soonDays:7, soonKm:500, tireSoonDays:14
+};
+
+/* ========= 状態 ========= */
+const S = {cars:{}, photos:{}, records:{}, settings:null};
+let view = 'garage';
+let curCar = lsGet('senshakun.cur');
+let histFilter = {type:'all', year:'all'};
+let calMonth = (()=>{const d=new Date();return {y:d.getFullYear(),m:d.getMonth()};})();
+let calSel = null;
+let store = null;          // {mode, write(kind,id,data), remove(kind,id)}
+let loaded = false;
+let downloadsNS = null;
+
+function settings(){
+  const s = S.settings || {};
+  const iv = {};
+  INTERVAL_TYPES.forEach(k=>{ iv[k] = Object.assign({}, DEFAULT_SETTINGS.intervals[k], (s.intervals||{})[k]||{}); });
+  return Object.assign({}, DEFAULT_SETTINGS, s, {intervals:iv});
+}
+
+/* ========= ユーティリティ ========= */
+function lsGet(k){try{return localStorage.getItem(k);}catch(e){return null;}}
+function lsSet(k,v){try{localStorage.setItem(k,v);return true;}catch(e){return false;}}
+function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,8);}
+function pad(n){return String(n).padStart(2,'0');}
+function today(){const d=new Date();return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());}
+function dnum(s){const [y,m,d]=s.split('-').map(Number);return Date.UTC(y,m-1,d)/86400000;}
+function daysBetween(a,b){return Math.round(dnum(b)-dnum(a));}
+function addDays(s,n){const t=new Date((dnum(s)+n)*86400000);return t.getUTCFullYear()+'-'+pad(t.getUTCMonth()+1)+'-'+pad(t.getUTCDate());}
+function fmtDate(s){if(!s)return'';const [y,m,d]=s.split('-');const w='日月火水木金土'[new Date(+y,+m-1,+d).getDay()];return `${+y}/${+m}/${+d}(${w})`;}
+function fmtMD(s){const [,m,d]=s.split('-');return `${+m}/${+d}`;}
+function n(v){return v==null||v===''||isNaN(v)?'':Number(v).toLocaleString('ja-JP');}
+function toNum(v){if(v===''||v==null)return null;const x=Number(String(v).replace(/[,，\s]/g,''));return isNaN(x)?null:x;}
+function ico(k,cls=''){const t=TYPE[k];const c=t?t.color:(k==='tire'?'#3d9ad6':k==='shaken'?'#5f6690':'#6f8592');const ic=(t&&t.icon)?ICONS[t.icon]:ICONS[k];return `<span class="ico ${cls}" style="background:${c}">${ic||ICONS.other}</span>`;}
+function productText(r){ if(!r)return''; const q=r.qty!=null?r.qty+(r.unit||''):''; return [r.brand,r.pgrade,q].filter(Boolean).join(' '); }
+function carLabel(c){return [c.maker,c.model].filter(Boolean).join(' ')||'名前未設定の車';}
+function carsList(){return Object.values(S.cars).sort((a,b)=>(a.created||0)-(b.created||0));}
+function activeCar(){const cs=carsList();if(!cs.length)return null;return S.cars[curCar]||cs[0];}
+function recsOf(carId){return Object.values(S.records).filter(r=>r.carId===carId).sort((a,b)=>b.date.localeCompare(a.date)||(b.created||0)-(a.created||0));}
+function odoOf(car){let m=toNum(car.odometer)||0;recsOf(car.id).forEach(r=>{if(r.km!=null&&r.km>m)m=r.km;});return m||null;}
+
+/* ========= 保存（クラウド or この端末） ========= */
+async function initStore(){
+  let db=null,user=null,id=null;
+  try{
+    if(window.claude && typeof window.claude.use==='function'){
+      [db,user,downloadsNS] = await Promise.all([claude.use('db'),claude.use('user'),claude.use('downloads').catch(()=>null)]);
+      if(db&&user){ try{ id = await user.id(); }catch(e){ id=null; } }
+    }
+  }catch(e){ db=null; }
+  if(db && id){ startCloud(db,id); } else { startLocal(); }
+}
+/* この端末の保存：IndexedDB（写真が多くても入る）、使えなければlocalStorage */
+function idbOpen(){ return new Promise((res,rej)=>{ try{ const r=indexedDB.open('senshakun',1); r.onupgradeneeded=()=>r.result.createObjectStore('kv'); r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error);}catch(e){rej(e);} }); }
+function idbGet(db,k){ return new Promise((res,rej)=>{ const q=db.transaction('kv').objectStore('kv').get(k); q.onsuccess=()=>res(q.result); q.onerror=()=>rej(q.error); }); }
+function idbPut(db,k,v){ return new Promise((res,rej)=>{ const t=db.transaction('kv','readwrite'); t.objectStore('kv').put(v,k); t.oncomplete=()=>res(); t.onerror=()=>rej(t.error); }); }
+async function startLocal(){
+  let idb=null;
+  try{ idb=await idbOpen(); }catch(e){ idb=null; }
+  let d=null;
+  try{ if(idb) d=await idbGet(idb,'data'); }catch(e){}
+  if(!d){ try{ const raw=lsGet('senshakun.data'); if(raw) d=JSON.parse(raw); }catch(e){} }
+  if(d) Object.assign(S,{cars:d.cars||{},photos:d.photos||{},records:d.records||{},settings:d.settings||null});
+  try{ if(navigator.storage&&navigator.storage.persist) navigator.storage.persist(); }catch(e){}
+  let saving=Promise.resolve();
+  const save=()=>{ const snap=JSON.parse(JSON.stringify(S));
+    saving=saving.then(async()=>{ if(idb){ try{ await idbPut(idb,'data',snap); return; }catch(e){} }
+      if(!lsSet('senshakun.data',JSON.stringify(snap))) toast('保存できませんでした（容量不足の可能性）'); });
+    return saving; };
+  store={mode:'local', write:async()=>save(), remove:async()=>save()};
+  loaded=true; setBadge(); render();
+}
+function startCloud(db,id){
+  const base='data/users/'+id;
+  const col=db.collection(base);
+  const recCol=db.doc(base+'/log').collection('records');
+  const ref=(kind,key)=> kind==='record'? recCol.doc(key) : kind==='settings'? col.doc('settings') : col.doc(kind+'-'+key);
+  const queues={};
+  const run=(key,fn)=>{ const p=(queues[key]||Promise.resolve()).then(fn).catch(err=>{ dbErr(err); }); queues[key]=p; return p; };
+  store={mode:'cloud',
+    write:(kind,key,data)=>run(kind+key,()=>ref(kind,key).set(data)),
+    remove:(kind,key)=>run(kind+key,()=>ref(kind,key).delete())};
+  let ok1=false, ok2=false;
+  const timer=setTimeout(()=>{ if(!(ok1&&ok2)) setNote('データの読み込みに時間がかかっています。電波の良い所で開き直すと表示されます。'); },10000);
+  const done=()=>{ if(ok1&&ok2){ clearTimeout(timer); setNote(''); loaded=true; } };
+  col.onSnapshot(snap=>{
+    const cars={},photos={};let st=null;
+    snap.docs.forEach(d=>{ const x=d.data(); if(d.id.startsWith('car-'))cars[d.id.slice(4)]=x; else if(d.id.startsWith('photo-'))photos[d.id.slice(6)]=x.data; else if(d.id==='settings')st=x; });
+    S.cars=cars;S.photos=photos;S.settings=st;
+    if(!snap.metadata.fromCache)ok1=true; done(); loaded=loaded||snap.docs.length>0; render();
+  }, err=>{ clearTimeout(timer); dbErr(err); });
+  recCol.onSnapshot(snap=>{
+    const r={}; snap.docs.forEach(d=>{ r[d.id]=d.data(); }); S.records=r;
+    if(!snap.metadata.fromCache)ok2=true; done(); render();
+  }, err=>{ clearTimeout(timer); dbErr(err); });
+  setBadge(); render();
+}
+function dbErr(err){
+  const c=err&&err.code;
+  if(c==='quota_exceeded') setNote('保存容量がいっぱいです。不要な写真や記録を削除してください。');
+  else if(c==='revoked') setNote('このページへのアクセスが変更されたため、保存できません。');
+  else if(c==='invalid_argument') toast('保存できませんでした（データが大きすぎる可能性があります）');
+  else toast('保存に失敗しました。もう一度お試しください。');
+}
+function setBadge(){
+  const b=document.getElementById('modeBadge');
+  if(store&&store.mode==='cloud'){b.className='badge-mode';b.querySelector('span').textContent='PC・スマホ同期';}
+  else {b.className='badge-mode local';b.querySelector('span').textContent='この端末に保存';}
+}
+function setNote(t){document.getElementById('notes').innerHTML=t?`<div class="note">${esc(t)}</div>`:'';}
+
+function saveCar(car){S.cars[car.id]=car;return store.write('car',car.id,car);}
+function savePhoto(carId,data){if(data){S.photos[carId]=data;return store.write('photo',carId,{carId,data});} delete S.photos[carId];return store.remove('photo',carId);}
+function saveRecord(r){S.records[r.id]=r;return store.write('record',r.id,r);}
+function delRecord(id){delete S.records[id];return store.remove('record',id);}
+function saveSettings(s){S.settings=s;return store.write('settings','',s);}
+
+/* ========= ステータス計算 ========= */
+function statusOf(car,k){
+  const st=settings(), iv=(TYPE[k]&&TYPE[k].custom)?{days:TYPE[k].days,km:TYPE[k].km}:(st.intervals[k]||{});
+  const last=recsOf(car.id).find(r=>r.type===k);
+  if(!last) return {level:'none',last:null,big:'まだ記録なし',sub:'記録すると次回の目安を出します'};
+  const ds=daysBetween(last.date,today());
+  const odo=odoOf(car);
+  let rd=null, rk=null;
+  if(iv.days) rd=iv.days-ds;
+  if(iv.km && last.km!=null && odo!=null) rk=iv.km-(odo-last.km);
+  let level='ok';
+  if((rd!=null&&rd<0)||(rk!=null&&rk<0)) level='over';
+  else if((rd!=null&&rd<=st.soonDays)||(rk!=null&&rk<=st.soonKm)) level='soon';
+  let big;
+  const bits=[];
+  if(rd!=null) bits.push(rd<0?`${-rd}日超過`:`あと${rd}日`);
+  if(rk!=null) bits.push(rk<0?`${n(-rk)}km超過`:`あと${n(rk)}km`);
+  big = bits.length? bits.join(' / ') : `${ds}日前`;
+  const sinceKm = (last.km!=null&&odo!=null)? `・${n(odo-last.km)}km走行` : '';
+  const pt=productText(last);
+  return {level,last,big,sub:`前回 ${fmtDate(last.date)}（${ds===0?'今日':ds+'日前'}${sinceKm}）${pt?'・'+pt:''}`};
+}
+function mdThisYear(md,y){return `${y}-${md}`;}
+function isWinter(dateStr){
+  const st=settings(); const y=+dateStr.slice(0,4);
+  const w=mdThisYear(st.winterMD,y), s=mdThisYear(st.summerMD,y);
+  return w>s ? (dateStr>=w||dateStr<s) : (dateStr>=w&&dateStr<s);
+}
+function nextMD(md){const t=today();let d=mdThisYear(md,+t.slice(0,4));if(d<t)d=mdThisYear(md,+t.slice(0,4)+1);return d;}
+function tireStatus(car){
+  const st=settings(), t=today();
+  const last=recsOf(car.id).find(r=>r.type==='winter'||r.type==='summer');
+  const cur = last? (last.type==='winter'?'winter':'summer') : null;
+  const winterNow=isWinter(t);
+  const curName = cur==='winter'?'スタッドレス装着中':cur==='summer'?'ノーマルタイヤ装着中':'装着タイヤ未登録';
+  let level='ok', big, sub;
+  const effective = cur || (winterNow?'winter':'summer');
+  if(effective==='summer'){
+    if(winterNow && cur){ level='over'; big='スタッドレスへ履き替え時期'; sub=`目安 ${fmtMD(mdThisYear(st.winterMD,2000))} 〜`; }
+    else { const nd=nextMD(st.winterMD), dd=daysBetween(t,nd); level=dd<=st.tireSoonDays?'soon':'ok'; big=`冬タイヤまで あと${dd}日`; sub=`目安 ${fmtDate(nd)}`; }
+  } else {
+    if(!winterNow && cur){ level='over'; big='ノーマルへ戻す時期'; sub=`目安 ${fmtMD(mdThisYear(st.summerMD,2000))} 〜`; }
+    else { const nd=nextMD(st.summerMD), dd=daysBetween(t,nd); level=dd<=st.tireSoonDays?'soon':'ok'; big=`夏タイヤまで あと${dd}日`; sub=`目安 ${fmtDate(nd)}`; }
+  }
+  if(!cur){ level='none'; sub='履き替えを記録すると装着中のタイヤを表示します'; }
+  if(last) sub = `${curName}（${fmtDate(last.date)}）・${sub}`;
+  return {level,big,sub,cur};
+}
+function shakenStatus(car){
+  if(!car.shakenDate) return null;
+  const dd=daysBetween(today(),car.shakenDate);
+  const level = dd<0?'over':dd<=60?'soon':'ok';
+  return {level, big: dd<0?`${-dd}日過ぎています`:`あと${dd}日`, sub:`車検満了日 ${fmtDate(car.shakenDate)}`};
+}
+const LV={ok:'OK',soon:'もうすぐ',over:'時期です',none:'未記録'};
+
+/* ========= 描画 ========= */
+function render(){
+  syncTypes();
+  document.querySelectorAll('nav.tabs button[data-view]').forEach(b=>{ b.toggleAttribute('aria-current',false); if(b.dataset.view===view) b.setAttribute('aria-current','page'); });
+  const m=document.getElementById('main');
+  if(!store){ m.innerHTML='<div class="card empty">読み込み中…</div>'; return; }
+  if(view==='home') m.innerHTML=homeHTML();
+  else if(view==='history') m.innerHTML=historyHTML();
+  else if(view==='calendar') m.innerHTML=calendarHTML();
+  else if(view==='cars') m.innerHTML=carsHTML();
+  else if(view==='garage') m.innerHTML=garageHTML();
+}
+function switcherHTML(){
+  const cs=carsList(); if(cs.length<2) return '';
+  const a=activeCar();
+  return `<div class="switcher" role="group" aria-label="車の切り替え">${cs.map(c=>`<button type="button" data-act="pick-car" data-id="${c.id}" aria-pressed="${c.id===a.id}">${esc(c.nickname||carLabel(c))}</button>`).join('')}</div>`;
+}
+function garageHTML(){
+  const cs=carsList(), a=activeCar();
+  const cards=cs.map(c=>{
+    const odo=odoOf(c), last=recsOf(c.id)[0];
+    const warn=['wash','wax','oil','rotation'].map(k=>statusOf(c,k)).filter(x=>x.level==='over').length+(tireStatus(c).level==='over'?1:0);
+    return `<article class="card gcar">
+      <button type="button" class="gpick" data-act="open-car" data-id="${c.id}" aria-label="${esc(carLabel(c))}を開く">
+        <span class="gph">${S.photos[c.id]?`<img src="${S.photos[c.id]}" alt="">`:`<span class="noph">${ICONS.camera}</span>`}${c.plate?`<span class="plate">${esc(c.plate)}</span>`:''}</span>
+        <span class="ginfo"><span class="gname">${esc(c.nickname||carLabel(c))}${a&&a.id===c.id&&cs.length>1?' <small>前回表示</small>':''}</span>
+          <span class="gsub">${esc([c.nickname?carLabel(c):'',c.grade,c.year&&c.year+'年式'].filter(Boolean).join('・'))}</span>
+          <span class="gsub num">${odo!=null?n(odo)+' km':'走行距離 未入力'}${last?`・最終記録 ${fmtDate(last.date)}`:''}</span>
+          ${warn?`<span class="pill over" style="margin:2px 0 0;justify-self:start">${warn}件 時期です</span>`:''}</span>
+      </button>
+      <div class="gbtns"><button type="button" class="btn ghost small" data-act="edit-car" data-id="${c.id}">編集</button><button type="button" class="btn danger small" data-act="del-car" data-id="${c.id}">削除</button><button type="button" class="btn small grow" data-act="open-car" data-id="${c.id}">この車を開く</button></div>
+    </article>`;}).join('');
+  return `<div class="stack">
+    <div class="sec-h"><h2>${cs.length?'車を選んでください':'まずは愛車を登録しましょう'}</h2><small>${cs.length?cs.length+'台登録中':''}</small></div>
+    ${cards}
+    <button type="button" class="card gadd" data-act="new-car"><span class="plus">＋</span><span><b>車を追加する</b><small>車種・グレード・走行距離・写真を登録</small></span></button>
+  </div>`;
+}
+function homeHTML(){
+  const car=activeCar();
+  if(!car) return welcomeHTML();
+  const odo=odoOf(car);
+  const y=today().slice(0,4), ym=today().slice(0,7);
+  const recs=recsOf(car.id);
+  const washY=recs.filter(r=>r.type==='wash'&&r.date.startsWith(y)).length;
+  const washM=recs.filter(r=>r.type==='wash'&&r.date.startsWith(ym)).length;
+  const photo=S.photos[car.id];
+  const tiles=[];
+  ['wash','wax','oil','element','rotation'].forEach(k=>{ const s=statusOf(car,k); tiles.push(tileHTML(k,{wash:'洗車',wax:'ワックス',oil:'オイル交換',element:'エレメント',rotation:'ローテーション'}[k],s,`data-act="add" data-type="${k}"`)); });
+  const ts=tireStatus(car); tiles.push(tileHTML('tire','履き替え',ts,`data-act="add" data-type="${ts.cur==='winter'||(!ts.cur&&isWinter(today()))?'summer':'winter'}"`));
+  const sk=shakenStatus(car); if(sk) tiles.push(tileHTML('shaken','車検',sk,`data-act="edit-car" data-id="${car.id}"`));
+  tiles.push(tileHTML('inspection','点検',statusOf(car,'inspection'),`data-act="add" data-type="inspection"`));
+  customTypes().forEach(c=>{ tiles.push(tileHTML(c.k,c.name,statusOf(car,c.k),`data-act="add" data-type="${c.k}"`)); });
+  const recent=recs.slice(0,5);
+  return `<div class="stack">
+    ${switcherHTML()}
+    <section class="card hero" aria-label="愛車">
+      <div class="photo">${photo?`<img src="${photo}" alt="${esc(carLabel(car))}の写真">`:`<button type="button" class="ph-empty" data-act="edit-car" data-id="${car.id}" style="background:none;border:0">${ICONS.camera}<span>写真を登録する</span></button>`}
+        ${car.plate?`<span class="plate">${esc(car.plate)}</span>`:''}</div>
+      <div class="body">
+        <div class="name"><h2>${esc(carLabel(car))}</h2><span>${esc([car.grade,car.year&&car.year+'年式',car.color].filter(Boolean).join('・'))}</span>
+          <button type="button" class="btn ghost small" style="margin-left:auto" data-act="edit-car" data-id="${car.id}">編集</button></div>
+        <div class="facts">
+          <button type="button" class="fact" data-act="odo" aria-label="走行距離を更新"><small>走行距離・更新</small><b class="num">${odo!=null?n(odo)+' km':'未入力'}</b></button>
+          <div class="fact"><small>今月の洗車</small><b class="num">${washM} 回</b></div>
+          <div class="fact"><small>${y}年の洗車</small><b class="num">${washY} 回</b></div>
+        </div>
+      </div>
+    </section>
+    <div class="quick" role="group" aria-label="すぐ記録">
+      ${['wash','wax','oil','rotation'].map(k=>`<button type="button" data-act="add" data-type="${k}">${ico(k)}${TYPE[k].short}した</button>`).join('')}
+      <button type="button" data-act="add" data-type="${ts.cur==='winter'||(!ts.cur&&isWinter(today()))?'summer':'winter'}">${ico('tire')}履き替えた</button>
+    </div>
+    <div class="sec-h"><h2>次はいつ？</h2><small>タイルをタップで記録</small></div>
+    <div class="tiles">${tiles.join('')}</div>
+    <div class="sec-h"><h2>最近の記録</h2><button type="button" class="btn ghost small" data-view-go="history">すべて見る</button></div>
+    <div class="card list">${recent.length?recent.map(rowHTML).join(''):'<div class="empty">まだ記録がありません。下の「＋記録する」から始めましょう。</div>'}</div>
+  </div>`;
+}
+function tileHTML(k,title,s,attr){
+  return `<button type="button" class="tile ${s.level}" ${attr}>
+    <span class="t-h">${ico(k,'sm')}<span>${esc(title)}</span><span class="pill ${s.level}">${LV[s.level]}</span></span>
+    <span class="t-big num">${esc(s.big)}</span><span class="t-sub">${esc(s.sub)}</span></button>`;
+}
+function rowHTML(r){
+  const t=tget(r.type,r);
+  const car=S.cars[r.carId];
+  const multi=carsList().length>1;
+  const sub=[productText(r),r.detail,r.place,r.memo].filter(Boolean).join('／');
+  return `<button type="button" class="row" data-act="edit-rec" data-id="${r.id}">${ico(r.type)}
+    <span class="r-main"><span class="r-t">${esc(t.name)} <small>${fmtDate(r.date)}${multi&&car?'・'+esc(car.nickname||carLabel(car)):''}</small></span>
+    ${sub?`<span class="r-s">${esc(sub)}</span>`:''}</span>
+    <span class="r-r num">${r.km!=null?n(r.km)+' km':''}${r.cost!=null?`<br>${n(r.cost)} 円`:''}</span></button>`;
+}
+function welcomeHTML(){
+  return `<div class="stack">
+    <section class="card welcome">
+      <svg viewBox="0 0 120 80" aria-hidden="true"><path d="M14 54c0-7 4-11 10-12l8-13c2-3 5-5 8-5h40c3 0 6 2 8 5l8 13c6 1 10 5 10 12v6c0 3-2 5-5 5H19c-3 0-5-2-5-5z" fill="#19a7ce"/><path d="M38 31c1-2 3-3 5-3h34c2 0 4 1 5 3l7 11H31z" fill="#e6f7fd"/><circle cx="50" cy="38" r="3" fill="#10293a"/><circle cx="70" cy="38" r="3" fill="#10293a"/><path d="M55 50q5 4 10 0" stroke="#10293a" stroke-width="2.5" fill="none" stroke-linecap="round"/><circle cx="34" cy="66" r="8" fill="#10293a"/><circle cx="86" cy="66" r="8" fill="#10293a"/><circle cx="104" cy="16" r="6" fill="#fff" stroke="#8fd3ea" stroke-width="2"/><circle cx="16" cy="22" r="4" fill="#fff" stroke="#8fd3ea" stroke-width="2"/></svg>
+      <h2>まずは愛車を登録しましょう</h2>
+      <p style="margin:0;color:var(--muted);font-size:14px;max-width:34em">車種・グレード・走行距離・写真を登録すると、洗車やオイル交換の「次はいつ？」がひと目でわかります。</p>
+      <button type="button" class="btn" data-act="new-car">車を登録する</button>
+    </section>
+    <div class="sec-h"><h2>次はいつ？</h2><small>タップで記録できます（表示は例）</small></div>
+    <div class="tiles">
+      ${tileHTML('wash','洗車',{level:'soon',big:'あと3日',sub:'表示例：前回 10/30(木)（11日前）'},'data-act="add" data-type="wash"')}
+      ${tileHTML('oil','オイル交換',{level:'ok',big:'あと96日 / 2,350km',sub:'表示例：前回 8/16(土)（84日前・2,650km走行）'},'data-act="add" data-type="oil"')}
+      ${tileHTML('tire','履き替え',{level:'over',big:'スタッドレスへ履き替え時期',sub:'表示例：ノーマルタイヤ装着中'},'data-act="add" data-type="winter"')}
+      ${tileHTML('wax','ワックス',{level:'over',big:'12日超過',sub:'表示例：前回 7/31(木)（102日前）'},'data-act="add" data-type="wax"')}
+    </div>
+  </div>`;
+}
+function historyHTML(){
+  const car=activeCar();
+  if(!car) return welcomeHTML();
+  let recs=recsOf(car.id);
+  const years=[...new Set(recs.map(r=>r.date.slice(0,4)))].sort().reverse();
+  if(histFilter.year!=='all') recs=recs.filter(r=>r.date.startsWith(histFilter.year));
+  const yearRecs=recs;
+  if(histFilter.type!=='all') recs=recs.filter(r=>histFilter.type==='tire'?(r.type==='winter'||r.type==='summer'):r.type===histFilter.type);
+  const total=recs.reduce((a,r)=>a+(r.cost||0),0);
+  const counts={}; yearRecs.forEach(r=>{counts[r.type]=(counts[r.type]||0)+1;});
+  let html='', curM='';
+  recs.forEach(r=>{ const m=r.date.slice(0,7); if(m!==curM){ if(curM) html+='</div>'; curM=m; html+=`<div class="month-h">${+m.slice(0,4)}年${+m.slice(5)}月</div><div class="card list">`; } html+=rowHTML(r); });
+  if(curM) html+='</div>';
+  const fchips=[['all','すべて',null],['wash','洗車','wash'],['wax','ワックス','wax'],['oil','オイル','oil'],['element','エレメント','element'],['rotation','ローテ','rotation'],['tire','履き替え','winter'],['inspection','点検','inspection'],['other','その他','other']].concat(customTypes().map(c=>[c.k,c.name,c.k]));
+  return `<div class="stack">
+    ${switcherHTML()}
+    <div class="sec-h"><h2>履歴　${esc(car.nickname||carLabel(car))}</h2>
+      <select class="inp" id="yearSel" style="width:auto;padding:5px 10px;font-size:14px" aria-label="年で絞り込み">
+        <option value="all">全期間</option>${years.map(y=>`<option value="${y}" ${histFilter.year===y?'selected':''}>${y}年</option>`).join('')}</select></div>
+    <div class="quick" style="grid-template-columns:repeat(4,1fr)" role="group" aria-label="すぐ記録">
+      ${['wash','wax','oil'].map(k=>`<button type="button" data-act="add" data-type="${k}">${ico(k)}${TYPE[k].short}した</button>`).join('')}
+      <button type="button" data-act="add" data-type="${tireStatus(car).cur==='winter'||(!tireStatus(car).cur&&isWinter(today()))?'summer':'winter'}">${ico('tire')}履き替えた</button>
+    </div>
+    <div class="chips" role="group" aria-label="種類で絞り込み">${fchips.map(([k,l,c])=>`<button type="button" class="chip" data-act="hfilter" data-k="${k}" aria-pressed="${histFilter.type===k}">${c?`<span class="dot" style="background:${tget(c).color}"></span>`:''}${esc(l)}${k!=='all'?` <span class="num">${k==='tire'?(counts.winter||0)+(counts.summer||0):(counts[k]||0)}</span>`:''}</button>`).join('')}</div>
+    <div class="sumbar">
+      <div class="fact"><small>件数</small><b class="num">${recs.length} 件</b></div>
+      <div class="fact"><small>費用合計</small><b class="num">${n(total)||0} 円</b></div>
+      <div class="fact"><small>洗車回数</small><b class="num">${counts.wash||0} 回</b></div>
+    </div>
+    ${recs.length?html:'<div class="card empty">この条件の記録はありません。</div>'}
+  </div>`;
+}
+function calendarHTML(){
+  const car=activeCar();
+  if(!car) return welcomeHTML();
+  const {y,m}=calMonth;
+  const first=new Date(y,m,1), startDow=first.getDay();
+  const dim=new Date(y,m+1,0).getDate();
+  const byDate={}; recsOf(car.id).forEach(r=>{(byDate[r.date]=byDate[r.date]||[]).push(r);});
+  const t=today();
+  let cells='';
+  ['日','月','火','水','木','金','土'].forEach((d,i)=>cells+=`<div class="dow ${i===0?'sun':i===6?'sat':''}">${d}</div>`);
+  const startStr=`${y}-${pad(m+1)}-01`;
+  const total=Math.ceil((startDow+dim)/7)*7;
+  for(let i=0;i<total;i++){
+    const ds=addDays(startStr,i-startDow);
+    const other=+ds.slice(5,7)!==m+1;
+    const rs=byDate[ds]||[];
+    cells+=`<button type="button" class="day ${other?'other':''} ${ds===t?'today':''} ${ds===calSel?'sel':''}" data-act="cal-day" data-d="${ds}" aria-label="${fmtDate(ds)} 記録${rs.length}件"><span class="num">${+ds.slice(8)}</span><span class="marks">${rs.slice(0,6).map(r=>`<i style="background:${tget(r.type,r).color}"></i>`).join('')}</span></button>`;
+  }
+  const sel=calSel&&byDate[calSel]||[];
+  const monthRecs=recsOf(car.id).filter(r=>r.date.startsWith(`${y}-${pad(m+1)}`));
+  const legend=allTypes().filter(tp=>monthRecs.some(r=>r.type===tp.k));
+  return `<div class="stack">
+    ${switcherHTML()}
+    <section class="card">
+      <div class="cal-nav"><button type="button" class="iconbtn" data-act="cal-prev" aria-label="前の月">${ICONS.left}</button><h2>${y}年${m+1}月</h2><button type="button" class="iconbtn" data-act="cal-next" aria-label="次の月">${ICONS.right}</button></div>
+      <div class="cal">${cells}</div>
+    </section>
+    ${legend.length?`<div class="chips">${legend.map(tp=>`<span class="chip"><span class="dot" style="background:${tp.color}"></span>${tp.short} ${monthRecs.filter(r=>r.type===tp.k).length}</span>`).join('')}</div>`:''}
+    ${calSel?`<div class="sec-h"><h2>${fmtDate(calSel)}</h2><button type="button" class="btn small" data-act="add" data-date="${calSel}">この日に記録</button></div>
+      <div class="card list">${sel.length?sel.map(rowHTML).join(''):'<div class="empty">この日の記録はありません。</div>'}</div>`:'<p style="color:var(--muted);font-size:13px;margin:0">日付をタップすると、その日の記録が見られます。</p>'}
+  </div>`;
+}
+function carsHTML(){
+  const cs=carsList(), a=activeCar(), st=settings();
+  const ivRows=INTERVAL_TYPES.map(k=>`<div style="display:grid;grid-template-columns:1fr 92px 104px;gap:8px;align-items:center">
+      <span style="display:flex;gap:8px;align-items:center;font-size:14px">${ico(k,'sm')}${TYPE[k].name}</span>
+      <label class="fl" style="font-size:11px">日ごと<input class="inp num" inputmode="numeric" id="iv-${k}-days" value="${st.intervals[k].days??''}"></label>
+      <label class="fl" style="font-size:11px">kmごと<input class="inp num" inputmode="numeric" id="iv-${k}-km" value="${st.intervals[k].km??''}"></label></div>`).join('');
+  const [wm,wd]=st.winterMD.split('-').map(Number), [sm,sd]=st.summerMD.split('-').map(Number);
+  const mOpt=v=>Array.from({length:12},(_,i)=>`<option value="${i+1}" ${v===i+1?'selected':''}>${i+1}月</option>`).join('');
+  const dOpt=v=>Array.from({length:31},(_,i)=>`<option value="${i+1}" ${v===i+1?'selected':''}>${i+1}日</option>`).join('');
+  return `<div class="stack">
+    <div class="sec-h"><h2>登録している車</h2><span class="btns"><button type="button" class="btn ghost small" data-act="garage">車の一覧</button><button type="button" class="btn small" data-act="new-car">＋車を追加</button></span></div>
+    <div class="card list">${cs.length?cs.map(c=>`<div class="row" style="align-items:center">
+        <span class="photo-pick"><span class="thumb" style="width:84px">${S.photos[c.id]?`<img src="${S.photos[c.id]}" alt="">`:'写真なし'}</span></span>
+        <span class="r-main"><span class="r-t">${esc(carLabel(c))}${c.id===a.id?' <small>表示中</small>':''}</span>
+        <span class="r-s">${esc([c.grade,c.year&&c.year+'年式',c.plate].filter(Boolean).join('・'))}${odoOf(c)?`<br>${n(odoOf(c))} km`:''}</span></span>
+        <span class="btns" style="flex-direction:column">${c.id!==a.id?`<button type="button" class="btn ghost small" data-act="pick-car" data-id="${c.id}">表示する</button>`:''}<button type="button" class="btn ghost small" data-act="edit-car" data-id="${c.id}">編集</button></span>
+      </div>`).join(''):'<div class="empty">まだ車が登録されていません。</div>'}</div>
+
+    <div class="sec-h"><h2>記録する項目</h2><button type="button" class="btn small" data-act="new-type">＋項目を追加</button></div>
+    <section class="card" style="padding:12px 14px;display:grid;gap:10px">
+      <div class="chips">${TYPES.map(t=>`<span class="chip">${ico(t.k,'sm')}${t.name}</span>`).join('')}</div>
+      ${customTypes().length?`<div class="list" style="border-top:1px solid var(--line)">${customTypes().map(c=>`<button type="button" class="row" data-act="edit-type" data-k="${c.k}">${ico(c.k)}
+        <span class="r-main"><span class="r-t">${esc(c.name)} <small>自分で追加</small></span><span class="r-s">${[c.days?c.days+'日ごと':'',c.km?n(c.km)+'kmごと':'',c.product?'メーカー名・数量あり':''].filter(Boolean).join('・')||'目安なし'}</span></span>
+        <span class="r-r" style="color:var(--accent)">編集</span></button>`).join('')}</div>`:'<p style="margin:0;font-size:12.5px;color:var(--muted)">「＋項目を追加」で、バッテリー交換・ワイパー交換・エアコンフィルター・給油など、好きな項目を増やせます。</p>'}
+    </section>
+
+    <div class="sec-h"><h2>次回の目安</h2><small>空欄はその条件を使いません</small></div>
+    <section class="card form" style="padding:14px">
+      ${ivRows}
+      <div style="border-top:1px solid var(--line);padding-top:12px;display:grid;gap:8px">
+        <span style="display:flex;gap:8px;align-items:center;font-size:14px">${ico('tire','sm')}タイヤ履き替えの時期</span>
+        <div class="f2">
+          <label class="fl">スタッドレスへ<span style="display:flex;gap:4px"><select class="inp" id="wm">${mOpt(wm)}</select><select class="inp" id="wd">${dOpt(wd)}</select></span></label>
+          <label class="fl">ノーマルへ<span style="display:flex;gap:4px"><select class="inp" id="sm">${mOpt(sm)}</select><select class="inp" id="sd">${dOpt(sd)}</select></span></label>
+        </div>
+      </div>
+      <div class="f2">
+        <label class="fl">「もうすぐ」と知らせる日数<input class="inp num" inputmode="numeric" id="soonDays" value="${st.soonDays}"></label>
+        <label class="fl">「もうすぐ」と知らせる距離(km)<input class="inp num" inputmode="numeric" id="soonKm" value="${st.soonKm}"></label>
+      </div>
+      <button type="button" class="btn" data-act="save-settings">目安を保存</button>
+    </section>
+
+    <div class="sec-h"><h2>音楽</h2></div>
+    <section class="card" style="padding:12px 14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+      <label style="display:flex;gap:8px;align-items:center;font-size:14px;flex:1;min-width:200px"><input type="checkbox" id="soundChk" ${soundOn()?'checked':''} style="width:20px;height:20px"> 記録したときに、車がよろこぶ音楽を鳴らす</label>
+      <button type="button" class="btn ghost small" data-act="sound-test">試しに聴く</button>
+    </section>
+
+    <div class="sec-h"><h2>データ</h2><small>${store.mode==='cloud'?'PCとスマホで同じデータが見られます':'この端末のブラウザに保存しています'}</small></div>
+    <section class="card form" style="padding:14px">
+      <div class="btns">
+        <button type="button" class="btn ghost grow" data-act="csv">記録をCSVで保存（Excel用）</button>
+        <button type="button" class="btn ghost grow" data-act="backup">バックアップを保存</button>
+      </div>
+      <label class="btn ghost" style="text-align:center;cursor:pointer">バックアップから読み込む<input type="file" id="importFile" accept=".json,application/json" hidden></label>
+      <p style="margin:0;font-size:12px;color:var(--muted)">CSVはExcelでそのまま開けます。バックアップ（.json）は車・写真・記録・設定をまとめて保存します。</p>
+    </section>
+  </div>`;
+}
+
+/* ========= モーダル ========= */
+function openModal(html){ const r=document.getElementById('modalRoot'); r.innerHTML=`<div class="modal-bg" data-act="modal-bg"><div class="modal" role="dialog" aria-modal="true">${html}</div></div>`; const f=r.querySelector('input,select,textarea,button'); if(f) setTimeout(()=>{try{f.focus({preventScroll:true});}catch(e){}},50); }
+function closeModal(){ document.getElementById('modalRoot').innerHTML=''; }
+function confirmDlg(msg,okLabel='削除する'){
+  return new Promise(res=>{
+    openModal(`<h3>確認</h3><p style="margin:0 0 16px">${esc(msg)}</p><div class="btns"><button type="button" class="btn ghost grow" id="cNo">やめる</button><button type="button" class="btn danger grow" id="cYes">${esc(okLabel)}</button></div>`);
+    document.getElementById('cNo').onclick=()=>{closeModal();res(false);};
+    document.getElementById('cYes').onclick=()=>{closeModal();res(true);};
+  });
+}
+function toast(msg){ const r=document.getElementById('toastRoot'); r.innerHTML=`<div class="toast" role="status">${esc(msg)}</div>`; clearTimeout(toast.t); toast.t=setTimeout(()=>{r.innerHTML='';},2400); }
+
+let recDraft=null;
+let pendingRec=null;
+function openRecord(opts){
+  const car=activeCar();
+  if(!car){ pendingRec={type:opts.type,date:opts.date}; toast('先に車を登録すると、続けて記録できます'); openCar(null); return; }
+  const r = opts.id ? Object.assign({},S.records[opts.id]) : {id:uid(),carId:car.id,type:opts.type||'wash',date:opts.date||today(),km:odoOf(car),cost:null,detail:'',place:'',memo:'',created:Date.now()};
+  recDraft=r;
+  const isNew=!opts.id;
+  const cs=carsList();
+  openModal(`<h3>${isNew?'記録する':'記録を編集'}</h3>
+   <div class="form">
+    ${cs.length>1?`<label class="fl">車<select class="inp" id="rCar">${cs.map(c=>`<option value="${c.id}" ${c.id===r.carId?'selected':''}>${esc(c.nickname||carLabel(c))}</option>`).join('')}</select></label>`:''}
+    <div class="typepick" role="group" aria-label="種類">${allTypes().map(t=>`<button type="button" data-k="${t.k}" aria-pressed="${t.k===r.type}">${ico(t.k,'sm')}${t.name}</button>`).join('')}</div>
+    <div class="f2">
+      <label class="fl">日付<input class="inp" type="date" id="rDate" value="${r.date}"></label>
+      <label class="fl">走行距離(km)<input class="inp num" inputmode="numeric" id="rKm" value="${r.km??''}" placeholder="例 45230"></label>
+    </div>
+    <div class="f2">
+      <label class="fl">内容<input class="inp" id="rDetail" list="rHints" value="${esc(r.detail)}" placeholder="例 手洗い"></label>
+      <label class="fl">費用(円)<input class="inp num" inputmode="numeric" id="rCost" value="${r.cost??''}" placeholder="例 800"></label>
+    </div>
+    <datalist id="rHints"></datalist>
+    <div id="rProduct" class="form" style="background:var(--surface2);border-radius:12px;padding:10px">
+      <div class="f2">
+        <label class="fl">メーカー名<input class="inp" id="rBrand" list="rBrands" value="${esc(r.brand||'')}" placeholder="例 カストロール"></label>
+        <label class="fl">グレード・商品名<input class="inp" id="rPgrade" list="rGrades" value="${esc(r.pgrade||'')}" placeholder="例 EDGE 0W-20"></label>
+      </div>
+      <label class="fl">数量<span style="display:flex;gap:6px"><input class="inp num" inputmode="decimal" id="rQty" value="${r.qty??''}" placeholder="例 4.2" style="flex:1">
+        <select class="inp" id="rUnit" style="width:96px">${['L','ml','g','本','缶','個','回分'].map(u=>`<option ${u===(r.unit||'')?'selected':''}>${u}</option>`).join('')}</select></span></label>
+      <datalist id="rBrands"></datalist><datalist id="rGrades"></datalist>
+    </div>
+    <label class="fl">場所・お店<input class="inp" id="rPlace" value="${esc(r.place)}" placeholder="例 自宅・ガソリンスタンド名"></label>
+    <label class="fl">メモ<textarea class="inp" id="rMemo" placeholder="使ったケミカル、気づいたことなど">${esc(r.memo)}</textarea></label>
+    <div class="btns">
+      ${isNew?'':'<button type="button" class="btn danger" id="rDel">削除</button>'}
+      <button type="button" class="btn ghost grow" id="rCancel">閉じる</button>
+      <button type="button" class="btn grow" id="rSave">保存</button>
+    </div>
+   </div>`);
+  const setHints=()=>{
+    const t=tget(recDraft.type,recDraft);
+    document.getElementById('rHints').innerHTML=(t.hint||[]).map(h=>`<option value="${esc(h)}">`).join('');
+    const box=document.getElementById('rProduct');
+    box.hidden=!t.product; box.style.display=t.product?'':'none';
+    if(t.product){
+      document.getElementById('rBrands').innerHTML=t.product.brands.map(h=>`<option value="${esc(h)}">`).join('');
+      document.getElementById('rGrades').innerHTML=t.product.grades.map(h=>`<option value="${esc(h)}">`).join('');
+      const ph=({oil:['例 カストロール','例 EDGE 0W-20','例 4.2'],wax:['例 シュアラスター','例 ゼロウォーター','例 280']})[recDraft.type]||['例 メーカー名','例 商品名・型番','例 1'];
+      document.getElementById('rBrand').placeholder=ph[0]; document.getElementById('rPgrade').placeholder=ph[1]; document.getElementById('rQty').placeholder=ph[2];
+      if(isNew){
+        const bE=document.getElementById('rBrand'),gE=document.getElementById('rPgrade'),qE=document.getElementById('rQty'),uE=document.getElementById('rUnit');
+        const prev=recsOf(recDraft.carId).find(x=>x.type===recDraft.type&&(x.brand||x.pgrade||x.qty!=null));
+        if(!bE.value&&!gE.value&&!qE.value){
+          if(prev){ bE.value=prev.brand||''; gE.value=prev.pgrade||''; qE.value=prev.qty??''; uE.value=prev.unit||t.product.unit; }
+          else uE.value=t.product.unit;
+        }
+      }
+    }
+  };
+  setHints();
+  document.querySelectorAll('.typepick button').forEach(b=>b.onclick=()=>{ recDraft.type=b.dataset.k; if(isNew){['rBrand','rPgrade','rQty'].forEach(i=>document.getElementById(i).value='');} document.querySelectorAll('.typepick button').forEach(x=>x.setAttribute('aria-pressed',x===b)); setHints(); });
+  document.getElementById('rCancel').onclick=closeModal;
+  if(!isNew) document.getElementById('rDel').onclick=async()=>{ if(await confirmDlg(`${fmtDate(r.date)} の「${tget(r.type,r).name}」を削除しますか？`)){ delRecord(r.id); render(); toast('削除しました'); } };
+  document.getElementById('rSave').onclick=()=>{
+    const d=document.getElementById('rDate').value;
+    if(!d){ toast('日付を入れてください'); return; }
+    const sel=document.getElementById('rCar');
+    const rec=Object.assign(recDraft,{
+      carId: sel?sel.value:recDraft.carId, date:d,
+      km:toNum(document.getElementById('rKm').value), cost:toNum(document.getElementById('rCost').value),
+      detail:document.getElementById('rDetail').value.trim(), place:document.getElementById('rPlace').value.trim(),
+      memo:document.getElementById('rMemo').value.trim(), updated:Date.now()});
+    rec.typeName=TYPE[rec.type]?TYPE[rec.type].name:(rec.typeName||'');
+    if(TYPE[rec.type]&&TYPE[rec.type].product){ rec.brand=document.getElementById('rBrand').value.trim(); rec.pgrade=document.getElementById('rPgrade').value.trim(); rec.qty=toNum(document.getElementById('rQty').value); rec.unit=document.getElementById('rUnit').value; }
+    else { delete rec.brand; delete rec.pgrade; delete rec.qty; delete rec.unit; }
+    saveRecord(rec);
+    const c=S.cars[rec.carId];
+    if(c && rec.km!=null && rec.km>(toNum(c.odometer)||0)){ saveCar(Object.assign({},c,{odometer:rec.km})); }
+    const isNewRec=!opts.id;
+    closeModal(); render();
+    if(isNewRec){ playHappy(rec.type); showHappy(rec.type,tget(rec.type,rec).name); }
+    else toast(`${tget(rec.type,rec).name}を保存しました`);
+  };
+}
+function openOdo(){
+  const car=activeCar(); if(!car) return;
+  openModal(`<h3>走行距離を更新</h3><div class="form">
+    <label class="fl">いまの走行距離(km)<input class="inp num" inputmode="numeric" id="oKm" value="${odoOf(car)??''}"></label>
+    <div class="btns"><button type="button" class="btn ghost grow" id="oNo">閉じる</button><button type="button" class="btn grow" id="oYes">更新</button></div></div>`);
+  document.getElementById('oNo').onclick=closeModal;
+  document.getElementById('oYes').onclick=()=>{ const v=toNum(document.getElementById('oKm').value); if(v==null){toast('数字を入れてください');return;} saveCar(Object.assign({},car,{odometer:v,odoDate:today()})); closeModal(); render(); toast('走行距離を更新しました'); };
+}
+function openTypeEditor(k){
+  const isNew=!k;
+  const c = k? Object.assign({},customTypes().find(x=>x.k===k)) : {k:'c_'+uid(),name:'',color:COLOR_CHOICES[0],icon:'other',days:null,km:null,product:false,unit:'個'};
+  const draw=()=>`<h3>${isNew?'項目を追加':'項目を編集'}</h3><div class="form">
+    <label class="fl">項目の名前<input class="inp" id="tName" value="${esc(c.name)}" placeholder="例 バッテリー交換"></label>
+    <div class="fl">色<div class="chips" id="tColors">${COLOR_CHOICES.map(col=>`<button type="button" class="chip" data-col="${col}" aria-pressed="${col===c.color}" aria-label="色 ${col}" style="width:34px;height:34px;padding:0;justify-content:center;background:${col};border:3px solid ${col===c.color?'var(--ink)':'transparent'}"></button>`).join('')}</div></div>
+    <div class="fl">マーク<div class="chips" id="tIcons">${ICON_CHOICES.map(ic=>`<button type="button" class="chip" data-ic="${ic}" aria-pressed="${ic===c.icon}" style="padding:3px;border-width:2px;${ic===c.icon?'border-color:var(--ink)':''}"><span class="ico sm" style="background:${c.color}">${ICONS[ic]}</span></button>`).join('')}</div></div>
+    <div class="f2">
+      <label class="fl">次回の目安（日ごと）<input class="inp num" inputmode="numeric" id="tDays" value="${c.days??''}" placeholder="例 730"></label>
+      <label class="fl">次回の目安（kmごと）<input class="inp num" inputmode="numeric" id="tKm" value="${c.km??''}" placeholder="例 20000"></label>
+    </div>
+    <label style="display:flex;gap:8px;align-items:center;font-size:14px"><input type="checkbox" id="tProd" ${c.product?'checked':''} style="width:20px;height:20px"> メーカー名・グレード・数量の欄を使う</label>
+    <p style="margin:0;font-size:12px;color:var(--muted)">目安を空欄にすると、ホームには前回の日付だけ表示します。</p>
+    <div class="btns">${isNew?'':'<button type="button" class="btn danger" id="tDel">削除</button>'}
+      <button type="button" class="btn ghost grow" id="tNo">閉じる</button><button type="button" class="btn grow" id="tYes">保存</button></div></div>`;
+  const keep=()=>{ c.name=document.getElementById('tName').value; c.days=toNum(document.getElementById('tDays').value); c.km=toNum(document.getElementById('tKm').value); c.product=document.getElementById('tProd').checked; };
+  const wire=()=>{
+    document.querySelectorAll('#tColors [data-col]').forEach(b=>b.onclick=()=>{ keep(); c.color=b.dataset.col; openModal(draw()); wire(); });
+    document.querySelectorAll('#tIcons [data-ic]').forEach(b=>b.onclick=()=>{ keep(); c.icon=b.dataset.ic; openModal(draw()); wire(); });
+    document.getElementById('tNo').onclick=closeModal;
+    if(!isNew) document.getElementById('tDel').onclick=async()=>{
+      const cnt=Object.values(S.records).filter(r=>r.type===c.k).length;
+      if(await confirmDlg(`項目「${c.name}」を削除しますか？${cnt?`記録${cnt}件は「${c.name}」の名前のまま残ります。`:''}`)){
+        saveSettings(Object.assign({},S.settings||{},{customTypes:customTypes().filter(x=>x.k!==c.k)})); render(); toast('項目を削除しました');
+      }
+    };
+    document.getElementById('tYes').onclick=()=>{
+      keep(); c.name=c.name.trim();
+      if(!c.name){ toast('項目の名前を入れてください'); return; }
+      if(c.product) c.unit=c.unit||'個';
+      const list=customTypes().filter(x=>x.k!==c.k); const idx=customTypes().findIndex(x=>x.k===c.k);
+      if(idx>=0) list.splice(idx,0,c); else list.push(c);
+      saveSettings(Object.assign({},S.settings||{},{customTypes:list}));
+      closeModal(); render(); toast(isNew?'項目を追加しました':'保存しました');
+    };
+  };
+  openModal(draw()); wire();
+}
+/* ========= うれしい音楽と「ありがとう」 ========= */
+let actx=null;
+function soundOn(){ return lsGet('senshakun.sound')!=='off'; }
+function playHappy(type){
+  if(!soundOn()) return;
+  try{
+    const AC=window.AudioContext||window.webkitAudioContext; if(!AC) return;
+    actx=actx||new AC(); if(actx.state==='suspended') actx.resume();
+    const t0=actx.currentTime+0.05;
+    const master=actx.createGain(); master.gain.value=0.22; master.connect(actx.destination);
+    const note=(f,start,dur,wave='triangle',vol=1,slideTo)=>{
+      const o=actx.createOscillator(), g=actx.createGain();
+      o.type=wave; o.frequency.setValueAtTime(f,t0+start);
+      if(slideTo) o.frequency.exponentialRampToValueAtTime(slideTo,t0+start+dur);
+      g.gain.setValueAtTime(0.0001,t0+start);
+      g.gain.exponentialRampToValueAtTime(vol,t0+start+0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001,t0+start+dur);
+      o.connect(g); g.connect(master); o.start(t0+start); o.stop(t0+start+dur+0.05);
+    };
+    const F={C5:523.25,D5:587.33,E5:659.25,F5:698.46,G5:783.99,A5:880,B5:987.77,C6:1046.5,E6:1318.5,G6:1568,G4:392,C4:261.63,E4:329.63};
+    // プップー（車のよろこびクラクション）
+    note(440,0,0.12,'square',0.35); note(554,0,0.12,'square',0.25);
+    note(440,0.18,0.16,'square',0.35); note(554,0.18,0.16,'square',0.25);
+    // 泡がはじける音（洗車・ワックス）
+    if(type==='wash'||type==='wax'){ [0.42,0.55,0.66,0.8,0.9].forEach((st,i)=>note(500+i*140,st,0.09,'sine',0.5,1400+i*200)); }
+    // うれしいメロディ（オリジナル）
+    const off=(type==='wash'||type==='wax')?1.0:0.45;
+    const mel=[['C5',0,.14],['E5',.14,.14],['G5',.28,.14],['C6',.42,.22],['A5',.66,.12],['C6',.78,.12],['E6',.92,.5]];
+    mel.forEach(([k,st,d])=>note(F[k],off+st,d+0.08,'triangle',0.8));
+    // ベース
+    [['C4',0,.4],['G4',.42,.24],['C4',.66,.3],['E4',.92,.5]].forEach(([k,st,d])=>note(F[k],off+st,d,'sine',0.55));
+    // キラキラ
+    [1.45,1.55,1.65].forEach((st,i)=>note([F.G6,F.E6,F.G6*1.335][i],off+st,0.25,'sine',0.35));
+  }catch(e){}
+}
+const HAPPY_MSG={wash:['ピカピカ！','気持ちいい〜！ありがとう'],wax:['ツヤツヤ！','雨もはじくよ。ありがとう'],oil:['エンジン元気いっぱい！','また一緒に走ろうね'],element:['すっきり！','オイルもきれいに回るよ'],rotation:['足元バッチリ！','タイヤが長持ちするね'],winter:['雪道もまかせて！','スタッドレスで安心'],summer:['夏タイヤで軽やか！','今年もよろしくね'],inspection:['点検ありがとう！','これで安心して走れるよ']};
+const MASCOT='<svg viewBox="0 0 240 190" aria-hidden="true"><circle class="bub" cx="36" cy="70" r="11" fill="#fff" stroke="#8fd3ea" stroke-width="2"/><circle class="bub" cx="208" cy="58" r="9" fill="#fff" stroke="#8fd3ea" stroke-width="2"/><circle class="bub" cx="190" cy="26" r="6" fill="#fff" stroke="#8fd3ea" stroke-width="2"/><ellipse cx="120" cy="172" rx="80" ry="8" fill="#0b5f80" opacity=".12"/><path d="M38 128c0-16 8-24 22-27l18-30c4-7 10-11 18-11h50c8 0 14 4 18 11l18 30c14 3 22 11 22 27v12c0 6-4 10-10 10H48c-6 0-10-4-10-10z" fill="#19a7ce"/><path d="M84 74c2-4 6-6 10-6h52c4 0 8 2 10 6l14 26H70z" fill="#e6f7fd"/><path d="M120 68v32" stroke="#19a7ce" stroke-width="5"/><path d="M90 90q8-10 16 0M134 90q8-10 16 0" stroke="#10293a" stroke-width="4.5" fill="none" stroke-linecap="round"/><path d="M104 114q16 18 32 0z" fill="#10293a"/><path d="M112 121q8 5 16 0" fill="#ff8fa3"/><circle cx="82" cy="120" r="8" fill="#ff9fb0" opacity=".75"/><circle cx="158" cy="120" r="8" fill="#ff9fb0" opacity=".75"/><rect x="40" y="114" width="18" height="10" rx="5" fill="#fff4c2"/><rect x="182" y="114" width="18" height="10" rx="5" fill="#fff4c2"/><circle cx="72" cy="152" r="17" fill="#10293a"/><circle cx="72" cy="152" r="7" fill="#c9d6dc"/><circle cx="168" cy="152" r="17" fill="#10293a"/><circle cx="168" cy="152" r="7" fill="#c9d6dc"/><path d="M58 50l3 8 8 3-8 3-3 8-3-8-8-3 8-3z" fill="#f2b134"/><path d="M186 86l2 5 5 2-5 2-2 5-2-5-5-2 5-2z" fill="#f2b134"/><path d="M120 22l2.5 7 7 2.5-7 2.5-2.5 7-2.5-7-7-2.5 7-2.5z" fill="#f2b134"/></svg>';
+function showHappy(type,name){
+  const m=HAPPY_MSG[type]||['うれしいな！',`${name}ありがとう`];
+  const r=document.getElementById('happyRoot');
+  r.innerHTML=`<div class="happy" role="status"><div class="box">${MASCOT}<b>${esc(m[0])}</b><small>${esc(m[1])}</small></div></div>`;
+  clearTimeout(showHappy.t); showHappy.t=setTimeout(()=>{ r.innerHTML=''; },2600);
+}
+function deleteCar(id){
+  recsOf(id).forEach(r=>delRecord(r.id)); if(S.photos[id]) savePhoto(id,null); delete S.cars[id]; store.remove('car',id);
+  if(curCar===id){ curCar=null; lsSet('senshakun.cur',''); }
+  render(); toast('削除しました');
+}
+async function askDeleteCar(id){
+  const c=S.cars[id]; if(!c) return;
+  const cnt=recsOf(id).length;
+  if(await confirmDlg(`「${carLabel(c)}」と、その記録${cnt}件を削除しますか？元に戻せません。`)) deleteCar(id);
+}
+let photoDraft;
+function openCar(id){
+  const isNew=!id;
+  const c = id? Object.assign({},S.cars[id]) : {id:uid(),created:Date.now()};
+  photoDraft = id? (S.photos[id]||null) : null;
+  const f=(key,label,ph,extra='')=>`<label class="fl">${label}<input class="inp" id="c-${key}" value="${esc(c[key]??'')}" placeholder="${esc(ph)}" ${extra}></label>`;
+  openModal(`<h3>${isNew?'車を登録':'車の情報を編集'}</h3><div class="form">
+    <div class="photo-pick"><span class="thumb" id="cThumb">${photoDraft?`<img src="${photoDraft}" alt="">`:'写真なし'}</span>
+      <span class="btns" style="flex-direction:column">
+      <button type="button" class="btn small" id="cShoot">${photoDraft?'撮り直す':'撮影する'}</button>
+      <label class="btn ghost small" style="cursor:pointer;text-align:center">写真を選ぶ<input type="file" accept="image/*" id="cPhoto" hidden></label>
+      <input type="file" accept="image/*" capture="environment" id="cCapture" hidden>
+      <button type="button" class="btn ghost small" id="cPhotoDel">写真を外す</button></span></div>
+    <div class="f2">${f('maker','メーカー','例 トヨタ')}${f('model','車種','例 プリウス')}</div>
+    <div class="f2">${f('grade','グレード','例 Z')}${f('year','年式','例 2023','inputmode="numeric"')}</div>
+    <div class="f2">${f('color','ボディカラー','例 プラチナホワイトパール')}${f('plate','ナンバー','例 和泉 300 あ 12-34')}</div>
+    <div class="f2">${f('odometer','いまの走行距離(km)','例 45230','inputmode="numeric"')}
+      <label class="fl">車検満了日<input class="inp" type="date" id="c-shakenDate" value="${esc(c.shakenDate||'')}"></label></div>
+    <div class="f2">${f('tireSummer','夏タイヤのサイズ','例 195/60R17')}${f('tireWinter','スタッドレスのサイズ・銘柄','例 ブリヂストン VRX3')}</div>
+    <div class="f2">${f('oilSpec','指定オイル・量','例 0W-16 4.2L')}${f('nickname','呼び名（複数台のとき）','例 妻の車')}</div>
+    <label class="fl">メモ<textarea class="inp" id="c-memo" placeholder="購入日、保険、ボディの注意点など">${esc(c.memo||'')}</textarea></label>
+    <div class="btns">${isNew?'':'<button type="button" class="btn danger" id="cDel">この車を削除</button>'}
+      <button type="button" class="btn ghost grow" id="cNo">閉じる</button><button type="button" class="btn grow" id="cYes">保存</button></div>
+  </div>`);
+  const showThumb=()=>{ document.getElementById('cThumb').innerHTML=photoDraft?`<img src="${photoDraft}" alt="">`:'写真なし'; document.getElementById('cShoot').textContent=photoDraft?'撮り直す':'撮影する'; };
+  const fromFile=async e=>{
+    const file=e.target.files&&e.target.files[0]; e.target.value=''; if(!file) return;
+    try{ photoDraft=await shrinkImage(file); showThumb(); }
+    catch(err){ toast('この写真は読み込めませんでした'); }
+  };
+  document.getElementById('cPhoto').onchange=fromFile;
+  document.getElementById('cCapture').onchange=fromFile;
+  document.getElementById('cShoot').onclick=()=>openCamera(data=>{ photoDraft=data; showThumb(); toast('写真を反映しました'); }, ()=>document.getElementById('cCapture').click());
+  document.getElementById('cPhotoDel').onclick=()=>{ photoDraft=null; showThumb(); };
+  document.getElementById('cNo').onclick=()=>{ pendingRec=null; closeModal(); };
+  if(!isNew) document.getElementById('cDel').onclick=async()=>{
+    const cnt=recsOf(id).length;
+    if(await confirmDlg(`「${carLabel(c)}」と、その記録${cnt}件を削除しますか？元に戻せません。`)){ deleteCar(id); }
+  };
+  document.getElementById('cYes').onclick=()=>{
+    ['maker','model','grade','year','color','plate','tireSummer','tireWinter','oilSpec','nickname'].forEach(k=>{ c[k]=document.getElementById('c-'+k).value.trim(); });
+    c.odometer=toNum(document.getElementById('c-odometer').value);
+    c.shakenDate=document.getElementById('c-shakenDate').value||'';
+    c.memo=document.getElementById('c-memo').value.trim();
+    if(!c.maker&&!c.model){ toast('メーカーか車種を入れてください'); return; }
+    c.updated=Date.now();
+    saveCar(c);
+    const had=S.photos[c.id]||null;
+    if(photoDraft!==had) savePhoto(c.id,photoDraft);
+    if(isNew){ curCar=c.id; lsSet('senshakun.cur',c.id); }
+    if(isNew&&view==='garage') view='home';
+    closeModal(); render(); toast(isNew?'車を登録しました':'保存しました');
+    if(isNew&&pendingRec){ const p=pendingRec; pendingRec=null; setTimeout(()=>openRecord(p),300); }
+  };
+}
+function shrinkDraw(src,w,h){
+  let max=1100, q=.8, out='';
+  for(let i=0;i<6;i++){
+    const sc=Math.min(1,max/Math.max(w,h));
+    const cv=document.createElement('canvas'); cv.width=Math.round(w*sc); cv.height=Math.round(h*sc);
+    cv.getContext('2d').drawImage(src,0,0,cv.width,cv.height);
+    out=cv.toDataURL('image/jpeg',q);
+    if(out.length<190000) break;
+    max=Math.round(max*.8); q=Math.max(.5,q-.08);
+  }
+  return out;
+}
+/* アプリ内カメラ：撮影 → 確認 → 撮り直す／この写真を使う */
+async function openCamera(onPhoto,fallback){
+  const md=navigator.mediaDevices;
+  if(!md||!md.getUserMedia){ fallback(); return; }
+  let stream;
+  try{ stream=await md.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:1920},height:{ideal:1080}},audio:false}); }
+  catch(e){ fallback(); return; }
+  const root=document.getElementById('camRoot');
+  root.innerHTML=`<div class="cam" role="dialog" aria-label="撮影">
+    <div class="view"><video id="camV" autoplay playsinline muted></video><img id="camP" alt="撮影した写真" hidden>
+      <div class="hint" id="camHint">車全体が入るように構えてください</div>
+      <button type="button" class="x" id="camX" aria-label="閉じる">×</button></div>
+    <div class="bar" id="camBar1"><button type="button" class="shut" id="camShot" aria-label="シャッター"></button></div>
+    <div class="bar" id="camBar2" hidden><button type="button" class="btn ghost" id="camRe">撮り直す</button><button type="button" class="btn" id="camUse">この写真を使う</button></div>
+  </div>`;
+  const v=document.getElementById('camV'), p=document.getElementById('camP');
+  v.srcObject=stream; try{ await v.play(); }catch(e){}
+  let shot=null;
+  const stop=()=>{ stream.getTracks().forEach(t=>t.stop()); root.innerHTML=''; };
+  const mode=taken=>{ v.hidden=taken; p.hidden=!taken; document.getElementById('camBar1').hidden=taken; document.getElementById('camBar2').hidden=!taken; document.getElementById('camHint').textContent=taken?'この写真でよければ「この写真を使う」':'車全体が入るように構えてください'; };
+  document.getElementById('camX').onclick=stop;
+  document.getElementById('camShot').onclick=()=>{
+    if(!v.videoWidth){ toast('カメラの準備中です'); return; }
+    shot=shrinkDraw(v,v.videoWidth,v.videoHeight); p.src=shot; v.pause(); mode(true);
+  };
+  document.getElementById('camRe').onclick=()=>{ shot=null; v.play().catch(()=>{}); mode(false); };
+  document.getElementById('camUse').onclick=()=>{ if(shot) onPhoto(shot); stop(); };
+}
+function shrinkImage(file){
+  return new Promise((res,rej)=>{
+    const url=URL.createObjectURL(file); const img=new Image();
+    img.onload=()=>{
+      URL.revokeObjectURL(url);
+      res(shrinkDraw(img,img.width,img.height));
+    };
+    img.onerror=()=>{URL.revokeObjectURL(url);rej(new Error('img'));};
+    img.src=url;
+  });
+}
+
+/* ========= 出力 ========= */
+async function saveFile(filename,data,label){
+  if(downloadsNS){
+    try{ await downloadsNS.save({filename,data}); toast(`${label}を保存しました`); return; }
+    catch(e){ if(e&&e.code==='declined') return; }
+  }
+  // 普通のブラウザ（GitHub Pages版）ではファイルとしてダウンロード
+  if(!window.claude){
+    try{
+      const blob=data instanceof Blob?data:new Blob([data],{type:filename.endsWith('.csv')?'text/csv':'application/json'});
+      const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=filename; document.body.appendChild(a); a.click();
+      setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},1500); toast(`${label}を保存しました`); return;
+    }catch(e){}
+  }
+  // ダウンロードできない環境ではコピー
+  const text = typeof data==='string'?data:await data.text();
+  try{ await navigator.clipboard.writeText(text.replace(/^﻿/,'')); toast('この画面では保存できないため、内容をコピーしました'); }
+  catch(e){ toast('この画面では保存できません'); }
+}
+function csvCell(v){ v=v==null?'':String(v); return /[",\n\r]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v; }
+function exportCSV(){
+  const rows=[['日付','車','種類','走行距離(km)','費用(円)','メーカー名','グレード・商品名','数量','単位','内容','場所・お店','メモ']];
+  Object.values(S.records).sort((a,b)=>a.date.localeCompare(b.date)).forEach(r=>{ const c=S.cars[r.carId]; rows.push([r.date,c?(c.nickname||carLabel(c)):'',tget(r.type,r).name,r.km??'',r.cost??'',r.brand||'',r.pgrade||'',r.qty??'',r.qty!=null?(r.unit||''):'',r.detail,r.place,r.memo]); });
+  const csv='﻿'+rows.map(r=>r.map(csvCell).join(',')).join('\r\n');
+  saveFile(`洗車くん_記録_${today()}.csv`, csv, 'CSV');
+}
+function exportBackup(){
+  const data=JSON.stringify({app:'senshakun',version:1,exported:new Date().toISOString(),cars:S.cars,photos:S.photos,records:S.records,settings:S.settings},null,1);
+  saveFile(`洗車くん_バックアップ_${today()}.json`, data, 'バックアップ');
+}
+async function importBackup(file){
+  try{
+    const d=JSON.parse(await file.text());
+    if(d.app!=='senshakun') throw new Error('x');
+    const nc=Object.keys(d.cars||{}).length, nr=Object.keys(d.records||{}).length;
+    if(!await confirmDlg(`車${nc}台・記録${nr}件を読み込みます。同じデータは上書きされます。`,'読み込む')) return;
+    Object.values(d.cars||{}).forEach(c=>saveCar(c));
+    Object.entries(d.photos||{}).forEach(([id,p])=>{ if(p) savePhoto(id,p); });
+    Object.values(d.records||{}).forEach(r=>saveRecord(r));
+    if(d.settings) saveSettings(d.settings);
+    render(); toast('読み込みました');
+  }catch(e){ toast('洗車くんのバックアップファイルではないようです'); }
+}
+
+/* ========= 操作 ========= */
+document.addEventListener('click',e=>{
+  const go=e.target.closest('[data-view-go]'); if(go){ view=go.dataset.viewGo; render(); scrollTo(0,0); return; }
+  const nv=e.target.closest('nav.tabs [data-view]'); if(nv){ view=nv.dataset.view; render(); scrollTo(0,0); return; }
+  const el=e.target.closest('[data-act]'); if(!el) return;
+  const a=el.dataset.act;
+  if(a==='modal-bg'){ if(e.target===el) closeModal(); return; }
+  if(a==='add') openRecord({type:el.dataset.type,date:el.dataset.date});
+  else if(a==='edit-rec') openRecord({id:el.dataset.id});
+  else if(a==='pick-car'){ curCar=el.dataset.id; lsSet('senshakun.cur',curCar); render(); }
+  else if(a==='edit-car') openCar(el.dataset.id);
+  else if(a==='new-car') openCar(null);
+  else if(a==='open-car'){ curCar=el.dataset.id; lsSet('senshakun.cur',curCar); view='home'; render(); scrollTo(0,0); }
+  else if(a==='del-car') askDeleteCar(el.dataset.id);
+  else if(a==='garage'){ view='garage'; render(); scrollTo(0,0); }
+  else if(a==='new-type') openTypeEditor(null);
+  else if(a==='edit-type') openTypeEditor(el.dataset.k);
+  else if(a==='odo') openOdo();
+  else if(a==='hfilter'){ histFilter.type=el.dataset.k; render(); }
+  else if(a==='cal-prev'||a==='cal-next'){ let {y,m}=calMonth; m+=a==='cal-next'?1:-1; if(m<0){m=11;y--;} if(m>11){m=0;y++;} calMonth={y,m}; render(); }
+  else if(a==='cal-day'){ calSel=el.dataset.d; render(); }
+  else if(a==='save-settings'){
+    const st=settings(); const iv={};
+    INTERVAL_TYPES.forEach(k=>{ iv[k]={days:toNum(document.getElementById(`iv-${k}-days`).value),km:toNum(document.getElementById(`iv-${k}-km`).value)}; });
+    const md=(mm,dd)=>pad(+document.getElementById(mm).value)+'-'+pad(+document.getElementById(dd).value);
+    saveSettings({customTypes:customTypes(),intervals:iv,winterMD:md('wm','wd'),summerMD:md('sm','sd'),soonDays:toNum(document.getElementById('soonDays').value)??st.soonDays,soonKm:toNum(document.getElementById('soonKm').value)??st.soonKm,tireSoonDays:st.tireSoonDays});
+    render(); toast('目安を保存しました');
+  }
+  else if(a==='sound-test'){ const was=lsGet('senshakun.sound'); lsSet('senshakun.sound','on'); playHappy('wash'); showHappy('wash','洗車'); if(was==='off') lsSet('senshakun.sound','off'); }
+  else if(a==='csv') exportCSV();
+  else if(a==='backup') exportBackup();
+});
+document.addEventListener('change',e=>{
+  if(e.target.id==='soundChk'){ lsSet('senshakun.sound',e.target.checked?'on':'off'); toast(e.target.checked?'音楽をオンにしました':'音楽をオフにしました'); }
+  if(e.target.id==='yearSel'){ histFilter.year=e.target.value; render(); }
+  if(e.target.id==='importFile'){ const f=e.target.files&&e.target.files[0]; if(f) importBackup(f); e.target.value=''; }
+});
+document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ const x=document.getElementById('camX'); if(x) x.click(); else closeModal(); } });
+
+/* ========= 起動 ========= */
+const splash=document.getElementById('splash');
+const hideSplash=()=>{ splash.classList.add('hide'); setTimeout(()=>splash.remove(),450); };
+document.getElementById('startBtn').onclick=hideSplash;
+setTimeout(hideSplash,2200);
+render();
+initStore();
+if('serviceWorker' in navigator&&!window.claude&&(location.protocol==='https:'||location.hostname==='localhost')){navigator.serviceWorker.register('sw.js').catch(()=>{});}
+</script>
+</body>
+</html>

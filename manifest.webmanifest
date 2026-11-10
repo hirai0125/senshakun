@@ -1,0 +1,17 @@
+{
+  "name": "洗車くん",
+  "short_name": "洗車くん",
+  "description": "洗車・ワックス・オイル交換・タイヤ履き替えを記録する愛車メンテナンス帳",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#eaf4f8",
+  "theme_color": "#0b88b4",
+  "lang": "ja",
+  "icons": [
+    {"src": "icon-192.png", "sizes": "192x192", "type": "image/png"},
+    {"src": "icon-512.png", "sizes": "512x512", "type": "image/png"},
+    {"src": "icon-512-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}
+  ]
+}
